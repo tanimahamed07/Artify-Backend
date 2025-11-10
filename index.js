@@ -1,14 +1,42 @@
 const express = require('express');
 const app = express();
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 const port = process.env.PORT || 3000;
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
+const admin = require("firebase-admin");
+require('dotenv').config()
+
+const serviceAccount = require("./artify-admin-key-token.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
 // middleware 
 app.use(cors());
 app.use(express.json());
 
-const uri = "mongodb+srv://ARTIFY_DB:mLpclWTRK99TzcIv@cluster0.2ss8g4p.mongodb.net/?appName=Cluster0";
+const verifyFireBaseToken = async (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res.status(401).send({ message: 'unauthorize access' })
+  }
+  const token = authorization.split(' ')[1];
+  try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    req.token_email = decoded.email;
+    next()
+  } catch {
+    return res.status(401).send({ message: 'unautorize access' })
+  }
+}
+
+
+
+
+
+const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.2ss8g4p.mongodb.net/?appName=Cluster0`;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -56,8 +84,11 @@ async function run() {
       )
 
     })
-    app.get('/my-gallery', async (req, res) => {
-      const { email } = req.query
+    app.get('/my-gallery', verifyFireBaseToken, async (req, res) => {
+      const { email } = req.query;
+      if (email !== req.token_email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
       const result = await modelCollection.find({ artistEmail: email }).toArray()
       res.send({
         success: true,
@@ -85,7 +116,7 @@ async function run() {
         result
       })
     })
-    app.post('/add-artworks', async (req, res) => {
+    app.post('/add-artworks', verifyFireBaseToken, async (req, res) => {
       const artWorks = req.body;
       // console.log(artWorks)
       const result = await modelCollection.insertOne(artWorks);
@@ -95,7 +126,7 @@ async function run() {
       })
 
     })
-    app.get('/art-details/:id', async (req, res) => {
+    app.get('/art-details/:id', verifyFireBaseToken, async (req, res) => {
       const { id } = req.params;
       console.log(id);
       const result = await modelCollection.findOne({ _id: new ObjectId(id) });
