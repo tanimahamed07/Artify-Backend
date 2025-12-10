@@ -7,7 +7,10 @@ const port = process.env.PORT || 3000;
 const admin = require("firebase-admin");
 require('dotenv').config()
 
-const serviceAccount = require("./artify-admin-key-token.json");
+const decoded = Buffer.from(process.env.FIREBASE_SERVICE_KEY, 'base64').toString('utf8');
+
+
+const serviceAccount = JSON.parse(decoded)
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -51,7 +54,7 @@ app.get('/', (req, res) => {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const db = client.db("ARTIFY_DB");
     const modelCollection = db.collection("Artworks");
     const favoriteCollecton = db.collection("favorite");
@@ -175,7 +178,7 @@ async function run() {
       })
     })
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. Successfully connected to MongoDB!");
   } catch (err) {
     console.error("MongoDB connection error:", err);
