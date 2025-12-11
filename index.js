@@ -22,6 +22,7 @@ app.use(express.json());
 
 const verifyFireBaseToken = async (req, res, next) => {
   const authorization = req.headers.authorization;
+  console.log(authorization)
   if (!authorization) {
     return res.status(401).send({ message: 'unauthorize access' })
   }
@@ -30,8 +31,11 @@ const verifyFireBaseToken = async (req, res, next) => {
     const decoded = await admin.auth().verifyIdToken(token);
     req.token_email = decoded.email;
     next()
-  } catch {
+  } catch(error){
+    console.log(error)
+    
     return res.status(401).send({ message: 'unautorize access' })
+
   }
 }
 
@@ -179,7 +183,7 @@ async function run() {
     })
 
     // await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. Successfully connected to MongoDB!");
+    // console.log("Pinged your deployment. Successfully connected to MongoDB!");
   } catch (err) {
     console.error("MongoDB connection error:", err);
   }
